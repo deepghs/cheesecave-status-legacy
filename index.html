@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CheeseCave Status</title>
+<meta name="description" content="Current status and 90-day history of CheeseCave: website, API, repository listing and file download.">
+<style>
+:root {
+  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --card: #ffffff;
+  --green: #2eb872; --yellow: #f0b429; --red: #e5484d; --none: #e6e9ed;
+  --banner-green: #e8f7ef; --banner-yellow: #fff6dd; --banner-red: #fdebec; --banner-grey: #eef0f2;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --card: #0d1117; --none: #2d333b;
+    --banner-green: #12261c; --banner-yellow: #2b2410; --banner-red: #2d1517; --banner-grey: #161b22; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+a { color: inherit; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 64px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 28px 0 20px; }
+header h1 { margin: 0; font-size: 20px; font-weight: 650; }
+header a.back { font-size: 14px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; }
+header a.back:hover { color: var(--fg); }
+.banner { border-radius: 8px; padding: 18px 20px; font-size: 18px; font-weight: 600; background: var(--banner-grey); }
+.banner.green { background: var(--banner-green); color: #1b7a4d; }
+.banner.yellow { background: var(--banner-yellow); color: #8a6100; }
+.banner.red { background: var(--banner-red); color: #b4232a; }
+@media (prefers-color-scheme: dark) { .banner.green { color: #56d28f; } .banner.yellow { color: #f0c24a; } .banner.red { color: #ff7b80; } }
+.notice { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--banner-yellow); color: #8a6100; font-size: 14px; }
+@media (prefers-color-scheme: dark) { .notice { color: #f0c24a; } }
+h2 { font-size: 16px; margin: 36px 0 12px; }
+.components { border: 1px solid var(--line); border-radius: 8px; }
+.component { padding: 16px 18px; }
+.component + .component { border-top: 1px solid var(--line); }
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.name { font-weight: 600; }
+.state { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.state.up { color: var(--green); } .state.degraded { color: #b98200; } .state.down { color: var(--red); } .state.unknown { color: var(--muted); }
+.bars { display: flex; gap: 2px; height: 34px; }
+.bar { flex: 1 1 0; min-width: 0; border-radius: 2px; background: var(--none); position: relative; }
+.bar.green { background: var(--green); } .bar.yellow { background: var(--yellow); } .bar.red { background: var(--red); }
+.bar:hover { filter: brightness(.9); }
+.bar .tip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 2;
+  background: var(--fg); color: var(--bg); font-size: 12px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+.bar:hover .tip, .bar:focus .tip { display: block; }
+.bar:nth-child(-n+8) .tip { left: 0; transform: none; }
+.bar:nth-last-child(-n+8) .tip { left: auto; right: 0; transform: none; }
+.axis { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.axis .rule { flex: 1; height: 1px; background: var(--line); }
+.incident { padding: 14px 0; border-top: 1px solid var(--line); }
+.incident:first-child { border-top: 0; }
+.incident a { font-weight: 600; text-decoration: none; }
+.incident a:hover { text-decoration: underline; }
+.incident .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.empty { color: var(--muted); }
+footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+footer p { margin: 4px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--none); }
+.legend .g::before { background: var(--green); } .legend .y::before { background: var(--yellow); } .legend .r::before { background: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>CheeseCave Status</h1>
+    <a class="back" href="https://hub.deepghs.org">Go to CheeseCave</a>
+  </header>
+  <div id="banner" class="banner">Loading status…</div>
+  <div id="notice" class="notice" hidden></div>
+  <h2>Services</h2>
+  <div id="components" class="components"></div>
+  <h2>Past incidents</h2>
+  <div id="incidents"></div>
+  <footer>
+    <div class="legend"><span class="g">No problem detected</span><span class="y">Some failed or slow checks</span><span class="r">Many failed checks (5% or more)</span><span>No data</span></div>
+    <p id="updated"></p>
+    <p>Checks run from GitHub's servers about every 5 minutes against public pages only. A problem in one region or in a feature that needs a login may not show here.</p>
+  </footer>
+</div>
+<script>
+(function () {
+  var STALE_MIN = 30;
+  var LABEL = { up: "Operational", degraded: "Degraded performance", down: "Outage", unknown: "No data" };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function ago(iso, now) {
+    var m = Math.max(0, Math.round((now - new Date(iso)) / 60000));
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min ago";
+    if (m < 1440) return Math.round(m / 60) + " h ago";
+    return Math.round(m / 1440) + " d ago";
+  }
+  function fmtDay(s) { return new Date(s + "T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }); }
+  function overall(cs, stale) {
+    var states = cs.map(function (c) { return c.state; });
+    if (!states.length || states.every(function (s) { return s === "unknown"; })) return ["No data yet", ""];
+    if (stale) return ["Status data is out of date", "yellow"];
+    var down = states.filter(function (s) { return s === "down"; }).length;
+    if (down === states.length) return ["Major outage", "red"];
+    if (down) return ["Partial outage", "red"];
+    if (states.indexOf("degraded") >= 0) return ["Degraded performance", "yellow"];
+    return ["All systems operational", "green"];
+  }
+  function render(d) {
+    var now = new Date();
+    var cs = d.components;
+    var newest = cs.reduce(function (a, c) { return c.checked_at && (!a || c.checked_at > a) ? c.checked_at : a; }, null);
+    var stale = !newest || (now - new Date(newest)) > STALE_MIN * 60000;
+    var o = overall(cs, stale);
+    var banner = document.getElementById("banner");
+    banner.textContent = o[0]; banner.className = "banner " + o[1];
+    var notice = document.getElementById("notice");
+    if (stale && newest) {
+      notice.hidden = false;
+      notice.textContent = "The last check was " + ago(newest, now) + ". The monitor may have stopped, so the states below can be out of date.";
+    }
+    var box = document.getElementById("components"); box.textContent = "";
+    cs.forEach(function (c) {
+      var item = el("div", "component");
+      var row = el("div", "row");
+      row.appendChild(el("span", "name", c.name));
+      row.appendChild(el("span", "state " + (stale ? "unknown" : c.state), (stale && c.state !== "unknown" ? "Last known: " : "") + LABEL[c.state]));
+      item.appendChild(row);
+      var bars = el("div", "bars");
+      c.bars.forEach(function (b) {
+        var bar = el("div", "bar " + b.color); bar.tabIndex = 0;
+        var tip = el("div", "tip");
+        var text = fmtDay(b.date);
+        if (b.uptime == null) text += " · no data";
+        else text += " · " + b.uptime + "% up" + (b.down ? " · " + b.down + " failed" : "") + (b.degraded ? " · " + b.degraded + " slow" : "");
+        tip.textContent = text; bar.appendChild(tip); bars.appendChild(bar);
+      });
+      item.appendChild(bars);
+      var axis = el("div", "axis");
+      axis.appendChild(el("span", "", d.days + " days ago"));
+      axis.appendChild(el("span", "rule"));
+      axis.appendChild(el("span", "", c.uptime == null ? "no data" : c.uptime + "% uptime"));
+      axis.appendChild(el("span", "rule"));
+      axis.appendChild(el("span", "", "Today"));
+      item.appendChild(axis);
+      box.appendChild(item);
+    });
+    var inc = document.getElementById("incidents"); inc.textContent = "";
+    if (!d.incidents.length) inc.appendChild(el("p", "empty", "No incidents in the last " + d.days + " days."));
+    d.incidents.slice().sort(function (a, b) { return a.opened_at < b.opened_at ? 1 : -1; }).forEach(function (i) {
+      var item = el("div", "incident");
+      var a = el("a", "", i.title); a.href = i.url; a.rel = "noopener";
+      item.appendChild(a);
+      var when = new Date(i.opened_at).toLocaleString();
+      item.appendChild(el("div", "meta", i.closed_at ? "Resolved · " + when + " – " + new Date(i.closed_at).toLocaleString() : "Ongoing since " + when));
+      inc.appendChild(item);
+    });
+    document.getElementById("updated").textContent = "Page data built " + ago(d.generated_at, now) + (newest ? "; last check " + ago(newest, now) + "." : ".");
+  }
+  fetch("status.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(render)
+    .catch(function () { var b = document.getElementById("banner"); b.textContent = "Could not load the status data"; b.className = "banner yellow"; });
+})();
+</script>
+</body>
+</html>
