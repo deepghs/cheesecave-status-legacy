@@ -1,0 +1,47 @@
+# Builds the status page (site/ + scripts/build_status.py) and publishes it to gh-pages.
+# This replaces Upptime's stock "Static Site CI" (site.yml, removed on purpose).
+name: Status Page
+on:
+  workflow_run:
+    workflows: ["Uptime CI"]
+    types: [completed]
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "site/**"
+      - "scripts/**"
+      - ".upptimerc.yml"
+      - ".github/workflows/status-page.yml"
+concurrency:
+  group: status-page
+  cancel-in-progress: true
+permissions:
+  contents: write
+  issues: read
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Test the data builder
+        run: python3 -I scripts/test_build_status.py
+      - name: Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/build_status.py --out public
+      - name: Publish to gh-pages
+        run: |
+          cd public
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Build status page [skip ci]"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
