@@ -26,7 +26,7 @@ status-website:
   baseUrl: /cheesecave-status
   name: CheeseCave Status
   introTitle: "**CheeseCave** service status"
-  introMessage: Live checks of the public website, the API, repository listing and file download. Checked every 5 minutes from GitHub; a delayed check shows as stale, not as healthy.
+  introMessage: Live checks of the public website, the API, repository listing and file download. Checked about every 5 minutes from GitHub's servers (prototype).
   navbar:
     - title: Status
       href: /
