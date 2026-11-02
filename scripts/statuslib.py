@@ -4,6 +4,7 @@ Nothing here knows a particular instance: every address comes from status.config
 Standard library only, so a workflow needs no install step.
 """
 import json
+import os
 import subprocess
 import time
 import urllib.error
@@ -12,13 +13,16 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import rollup
+
 DEFAULTS = {
     "interval_seconds": 300,   # time between two rounds of checks
     "timeout_seconds": 20,     # one request
-    "degraded_ms": 8000,       # slower than this counts as degraded
-    "history_days": 90,
+    "degraded_ms": 8000,       # slower than this counts as degraded (a component may set its own)
+    "raw_days": 14,            # raw checks are kept this long; hourly rows are kept for good
     "confirm_failures": 2,     # consecutive failed rounds before an outage is declared
 }
+DEFAULT_GROUP = "Services"
 
 
 def iso(when):
@@ -53,41 +57,57 @@ def component_url(cfg, comp):
 
 # ---------------------------------------------------------------- probing
 
-def http_fetch(url, headers, timeout, max_bytes):
-    """GET `url` (redirects are followed) and return (status, first max_bytes of the body)."""
-    req = urllib.request.Request(url, headers={"User-Agent": "cheesecave-status/1", **headers})
+def http_fetch(url, headers, timeout, max_bytes, method="GET", data=None):
+    """Request `url` (redirects are followed): (status, first max_bytes of the body, seconds to the headers, seconds to read the body)."""
+    req = urllib.request.Request(url, data=data, method=method, headers={"User-Agent": "cheesecave-status/1", **headers})
+    started = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, resp.read(max_bytes)
+            got_headers = time.monotonic()
+            body = resp.read(max_bytes)
+            return resp.status, body, got_headers - started, time.monotonic() - got_headers
     except urllib.error.HTTPError as err:
-        return err.code, b""
+        return err.code, b"", time.monotonic() - started, 0.0
 
 
 def probe(cfg, comp, fetch=http_fetch, clock=time.monotonic):
-    """-> (state, milliseconds or None); state is up, degraded or down."""
+    """-> (state, ms, ttfb_ms, MB/s); state is up, degraded or down. The last two are None when not measured."""
     expect = comp.get("expect_status", list(range(200, 300)))
+    body_data = comp["body"].encode() if comp.get("body") is not None else None
     start = clock()
     try:
-        status, body = fetch(component_url(cfg, comp), comp.get("headers", {}),
-                             cfg["timeout_seconds"], comp.get("max_bytes", 1_000_000))
+        res = fetch(component_url(cfg, comp), comp.get("headers", {}), cfg["timeout_seconds"],
+                    comp.get("max_bytes", 1_000_000), comp.get("method", "GET"), body_data)
     except Exception:
-        return "down", None
+        return "down", None, None, None
     ms = int((clock() - start) * 1000)
+    status, body = res[0], res[1]
+    ttfb = int(res[2] * 1000) if len(res) > 2 else None
+    read_seconds = res[3] if len(res) > 3 else None
+    speed = None
+    if comp.get("speed") and body and read_seconds is not None:
+        speed = round(len(body) / 1_000_000 / max(read_seconds, 0.001), 2)
     if status not in expect:
-        return "down", ms
+        return "down", ms, ttfb, speed
     want = comp.get("expect_json")
     if want is not None:
         try:
             data = json.loads(body)
         except ValueError:
-            return "down", ms
+            return "down", ms, ttfb, speed
         if not isinstance(data, dict) or any(data.get(k) != v for k, v in want.items()):
-            return "down", ms
-    return ("degraded" if ms > cfg["degraded_ms"] else "up"), ms
+            return "down", ms, ttfb, speed
+    text = comp.get("expect_text")
+    if text is not None and text not in body.decode("utf-8", "replace"):
+        return "down", ms, ttfb, speed
+    slow = ms > comp.get("degraded_ms", cfg["degraded_ms"])
+    if speed is not None and "min_speed" in comp and speed < comp["min_speed"]:
+        slow = True
+    return ("degraded" if slow else "up"), ms, ttfb, speed
 
 
 def check_all(cfg, now, fetch=http_fetch):
-    """One round: {"t": time, "c": {component: [state, ms]}}; components are probed in parallel."""
+    """One round: {"t": time, "c": {component: [state, ms, ttfb_ms, MB/s]}}; components are probed in parallel."""
     comps = cfg["components"]
     with ThreadPoolExecutor(max_workers=len(comps)) as pool:
         results = list(pool.map(lambda c: probe(cfg, c, fetch), comps))
@@ -105,7 +125,7 @@ def append_record(data_dir, record):
 
 
 def read_records(data_dir, now, days):
-    """Records of the last `days` days (plus the day before, for the window edge), oldest first."""
+    """Raw records of the last `days` days, oldest first."""
     first = (now - timedelta(days=days)).strftime("%Y-%m-%d")
     records = []
     for path in sorted((Path(data_dir) / "checks").glob("*.jsonl")):
@@ -164,8 +184,9 @@ def incident_actions(open_by_component, states_by_component, confirm):
     return actions
 
 
-def apply_actions(incidents, actions, now, gh):
-    """Open or close incidents in `incidents` (a list of dicts); `gh` creates and closes the GitHub issues."""
+def apply_actions(incidents, actions, now, gh, notify=None):
+    """Open or close incidents in `incidents` (a list of dicts); `gh` creates and closes the GitHub issues,
+    `notify(text)` (optional) tells the maintainers."""
     for kind, name in actions:
         if kind == "open":
             title = f"{name} is down"
@@ -175,15 +196,42 @@ def apply_actions(incidents, actions, now, gh):
                 number, url = None, None  # an outage must still reach the page when GitHub refuses the issue
             incidents.append({"component": name, "title": title, "url": url, "issue": number,
                               "opened_at": iso(now), "closed_at": None})
+            _tell(notify, f"🛑 {title} (since {iso(now)})" + (f" {url}" if url else ""))
         else:
             for inc in incidents:
                 if inc["component"] == name and inc["closed_at"] is None:
                     inc["closed_at"] = iso(now)
+                    _tell(notify, f"✅ {name} is reachable again ({iso(now)})")
                     if inc["issue"]:
                         try:
                             gh.close_issue(inc["issue"], f"{name} is reachable again ({iso(now)}).")
                         except Exception:
                             pass
+
+
+def _tell(notify, text):
+    if notify:
+        try:
+            notify(text)
+        except Exception:
+            pass  # a broken webhook must never stop the checks
+
+
+def make_notifier(url=None, style=None, post=None):
+    """A function that POSTs a text to a chat webhook (NOTIFY_WEBHOOK / NOTIFY_STYLE), or None without a URL."""
+    url = url if url is not None else os.environ.get("NOTIFY_WEBHOOK")
+    if not url:
+        return None
+    style = (style or os.environ.get("NOTIFY_STYLE") or "slack").lower()
+    shape = {"slack": lambda t: {"text": t}, "discord": lambda t: {"content": t},
+             "lark": lambda t: {"msg_type": "text", "content": {"text": t}}}[style]
+
+    def default_post(address, payload):
+        req = urllib.request.Request(address, data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json", "User-Agent": "cheesecave-status/1"})
+        urllib.request.urlopen(req, timeout=15).read()
+
+    return lambda text: (post or default_post)(url, shape(text))
 
 
 def load_incidents(data_dir):
@@ -200,62 +248,81 @@ def save_incidents(data_dir, incidents, now, days):
 
 # ---------------------------------------------------------------- the data of the page
 
-def build(cfg, records, incidents, now):
-    days = cfg["history_days"]
-    first_day = (now - timedelta(days=days - 1)).date()
+def groups_of(cfg):
+    """[{"name", "components": [names]}] in the order of the config (components without a group go to 'Services')."""
+    order, members = [], {}
+    for comp in cfg["components"]:
+        g = comp.get("group", DEFAULT_GROUP)
+        if g not in members:
+            order.append(g)
+            members[g] = []
+        members[g].append(comp["name"])
+    return [{"name": g, "components": members[g]} for g in order]
+
+
+def build_status(cfg, records, views, incidents, now):
+    """status.json: what the page needs before it has loaded any view (states, summary figures, incidents)."""
+    confirm = cfg["confirm_failures"]
     components = []
     for comp in cfg["components"]:
         name = comp["name"]
-        per_day, up_total, all_total, last_at = {}, 0, 0, None
-        for r in records:
-            if name not in r["c"]:
-                continue
-            state = r["c"][name][0]
-            counts = per_day.setdefault(parse_iso(r["t"]).date(), {"up": 0, "down": 0, "degraded": 0})
-            counts[state] += 1
-            last_at = r["t"]
-        bars = []
-        for i in range(days):
-            day = first_day + timedelta(days=i)
-            c = per_day.get(day, {"up": 0, "down": 0, "degraded": 0})
-            total = sum(c.values())
-            up_total += c["up"] + c["degraded"]
-            all_total += total
-            bars.append({"date": day.isoformat(), "color": day_color(c),
-                         "uptime": round(100 * (c["up"] + c["degraded"]) / total, 2) if total else None,
-                         "down": c["down"], "degraded": c["degraded"]})
+        latest = next((r for r in reversed(records) if name in r["c"]), None)
+        entry = latest["c"][name] if latest else None
         components.append({
             "name": name,
-            "state": current_state(component_states(records, name), cfg["confirm_failures"]),
-            "checked_at": last_at,
-            "uptime": round(100 * up_total / all_total, 2) if all_total else None,
-            "bars": bars,
+            "group": comp.get("group", DEFAULT_GROUP),
+            "state": current_state(component_states(records, name), confirm),
+            "checked_at": latest["t"] if latest else None,
+            "ms": entry[1] if entry else None,
+            "ttfb_ms": entry[2] if entry and len(entry) > 2 else None,
+            "speed": entry[3] if entry and len(entry) > 3 else None,
+            "has_speed": bool(comp.get("speed")),
+            "uptime": {rng: rollup.uptime(views[rng]["components"][name]) for rng in rollup.RANGES},
         })
     return {
         "generated_at": iso(now),
         "interval_seconds": cfg["interval_seconds"],
-        "days": days,
-        "instance": {"name": cfg["name"], "home_url": cfg["base_url"]},
+        "ranges": list(rollup.RANGES),
+        "instance": {"name": cfg["name"], "home_url": cfg["base_url"], **({"description": cfg["description"]} if cfg.get("description") else {})},
+        "groups": groups_of(cfg),
         "components": components,
         "incidents": [{k: i[k] for k in ("component", "title", "url", "opened_at", "closed_at")} for i in incidents],
     }
 
 
-def tick(cfg, data_dir, now, gh, fetch=http_fetch):
-    """One round: probe, record, update incidents, write status.json. Returns the status dict."""
+def write_json(path, obj):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    tmp.replace(path)
+
+
+def tick(cfg, data_dir, now, gh, fetch=http_fetch, notify=None):
+    """One round: probe, record, roll up, update incidents, write status.json and the views. Returns status.json's content."""
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
     append_record(data_dir, check_all(cfg, now, fetch))
-    prune(data_dir, now, cfg["history_days"])
-    records = read_records(data_dir, now, cfg["history_days"])
+    prune(data_dir, now, cfg["raw_days"])
+    records = read_records(data_dir, now, cfg["raw_days"])
+    names = [c["name"] for c in cfg["components"]]
+
+    hourly = rollup.load_hourly(data_dir)
+    fresh = rollup.hourly_from_records(records, names)
+    for hour, by in fresh.items():
+        hourly.setdefault(hour, {}).update(by)
+    rollup.save_hourly(data_dir, hourly, fresh)
+    views = {rng: rollup.build_view(rng, names, now, records, hourly) for rng in rollup.RANGES}
+    for rng, view in views.items():
+        write_json(data_dir / "view" / f"{rng}.json", view)
+
     confirm = cfg["confirm_failures"]
     incidents = load_incidents(data_dir)
     open_now = {i["component"]: i for i in incidents if i["closed_at"] is None}
-    recent = {c["name"]: component_states(records, c["name"])[-confirm:] for c in cfg["components"]}
-    apply_actions(incidents, incident_actions(open_now, recent, confirm), now, gh)
-    incidents = save_incidents(data_dir, incidents, now, cfg["history_days"])
-    status = build(cfg, records, incidents, now)
-    (data_dir / "status.json").write_text(json.dumps(status, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    recent = {n: component_states(records, n)[-confirm:] for n in names}
+    apply_actions(incidents, incident_actions(open_now, recent, confirm), now, gh, notify)
+    incidents = save_incidents(data_dir, incidents, now, 365)
+    status = build_status(cfg, records, views, incidents, now)
+    write_json(data_dir / "status.json", status)
     return status
 
 
@@ -264,8 +331,8 @@ def pages_config(cfg, repo):
     return {
         "name": cfg["name"],
         "home_url": cfg["base_url"],
-        "data_url": f"https://raw.githubusercontent.com/{repo}/status/status.json",
-        "fallback_url": "status.json",
+        "data_base": f"https://raw.githubusercontent.com/{repo}/status/",
+        "fallback_base": "",
         "refresh_seconds": 60,
     }
 

@@ -25,14 +25,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Test
-        run: python3 -I scripts/test_statuslib.py
+        run: python3 -I scripts/test_rollup.py && python3 -I scripts/test_statuslib.py
       - name: Fetch the current data for the fallback copy
         run: |
-          git fetch --quiet --depth 1 origin status && git show FETCH_HEAD:status.json > "$RUNNER_TEMP/status.json" || echo "no data branch yet"
+          mkdir -p "$RUNNER_TEMP/data"
+          git fetch --quiet --depth 1 origin status && git archive FETCH_HEAD status.json view | tar -x -C "$RUNNER_TEMP/data" || echo "no data branch yet"
       - name: Build
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python3 scripts/build_pages.py --out public --status-json "$RUNNER_TEMP/status.json"
+        run: python3 scripts/build_pages.py --out public --data-dir "$RUNNER_TEMP/data"
       - uses: actions/upload-pages-artifact@v4
         with:
           path: public

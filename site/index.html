@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>Status</title>
 <script>
 // Apply the saved theme before the first paint (no flash); "system" is the absence of the attribute.
@@ -10,81 +11,111 @@ try { var t = localStorage.getItem("status-theme"); if (t === "light" || t === "
 </script>
 <style>
 :root {
-  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --hover: #f3f4f6;
-  --green: #2eb872; --yellow: #f0b429; --red: #e5484d; --none: #e6e9ed;
+  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --hover: #f3f4f6; --panel: #f6f8fa;
+  --green: #2eb872; --yellow: #f0b429; --red: #e5484d; --none: #e6e9ed; --accent: #0969da;
   --ok-bg: #e8f7ef; --ok-fg: #1b7a4d; --warn-bg: #fff6dd; --warn-fg: #8a6100; --bad-bg: #fdebec; --bad-fg: #b4232a; --idle-bg: #eef0f2; --idle-fg: #424a53;
   --degraded: #b98200;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --hover: #1c2128; --none: #2d333b;
+    --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --hover: #1c2128; --panel: #161b22; --none: #2d333b; --accent: #4493f8;
     --ok-bg: #12261c; --ok-fg: #56d28f; --warn-bg: #2b2410; --warn-fg: #f0c24a; --bad-bg: #2d1517; --bad-fg: #ff7b80; --idle-bg: #161b22; --idle-fg: #c9d1d9;
     --degraded: #e0a800; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --hover: #1c2128; --none: #2d333b;
+  --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --hover: #1c2128; --panel: #161b22; --none: #2d333b; --accent: #4493f8;
   --ok-bg: #12261c; --ok-fg: #56d28f; --warn-bg: #2b2410; --warn-fg: #f0c24a; --bad-bg: #2d1517; --bad-fg: #ff7b80; --idle-bg: #161b22; --idle-fg: #c9d1d9;
   --degraded: #e0a800; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
 a { color: inherit; }
-.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 64px; }
-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 28px 0 20px; }
-header h1 { margin: 0; font-size: 20px; font-weight: 650; }
-.tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.back { font-size: 14px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; }
+button { font: inherit; color: inherit; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px 40px; }
+header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 18px 0 12px; }
+header h1 { margin: 0; font-size: 19px; font-weight: 650; }
+header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 4px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button:hover { background: var(--hover); color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--idle-bg); color: var(--fg); font-weight: 600; }
+.seg button[disabled] { opacity: .45; cursor: default; }
+.back { font-size: 13px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
 .back:hover { color: var(--fg); background: var(--hover); }
-.theme { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.theme button { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 5px 10px; cursor: pointer; }
-.theme button + button { border-left: 1px solid var(--line); }
-.theme button:hover { background: var(--hover); color: var(--fg); }
-.theme button[aria-pressed="true"] { background: var(--idle-bg); color: var(--fg); font-weight: 600; }
-.banner { border-radius: 8px; padding: 18px 20px; font-size: 18px; font-weight: 600; background: var(--idle-bg); color: var(--idle-fg); }
+.tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.banner { border-radius: 8px; padding: 12px 16px; font-size: 16px; font-weight: 600; background: var(--idle-bg); color: var(--idle-fg); display: flex; align-items: center; gap: 10px; }
+.banner::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
 .banner.green { background: var(--ok-bg); color: var(--ok-fg); }
 .banner.yellow { background: var(--warn-bg); color: var(--warn-fg); }
 .banner.red { background: var(--bad-bg); color: var(--bad-fg); }
-.notice { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; }
-h2 { font-size: 16px; margin: 36px 0 12px; }
-.components { border: 1px solid var(--line); border-radius: 8px; }
-.component { padding: 16px 18px; }
-.component + .component { border-top: 1px solid var(--line); }
-.row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.name { font-weight: 600; }
-.state { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.notice { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 13px; }
+.ongoing { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--bad-bg); color: var(--bad-fg); font-size: 13px; }
+.ongoing a { font-weight: 600; }
+.bar-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; }
+.bar-tools .left { display: flex; gap: 8px; flex-wrap: wrap; }
+.link { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 4px 2px; font-size: 13px; }
+.link:hover { text-decoration: underline; }
+.groups { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.group + .group { border-top: 1px solid var(--line); }
+.ghead { display: grid; grid-template-columns: 18px minmax(110px, 190px) 1fr 250px; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: transparent; border: 0; padding: 9px 14px; cursor: pointer; }
+.ghead:hover { background: var(--hover); }
+.chev { width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .12s; margin-left: 3px; }
+.group.open .chev { transform: rotate(45deg); }
+.gname { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gname small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.right { display: flex; align-items: center; gap: 12px; justify-content: flex-end; white-space: nowrap; font-size: 13px; }
+.state { font-weight: 600; }
 .state.up { color: var(--green); } .state.degraded { color: var(--degraded); } .state.down { color: var(--red); } .state.unknown { color: var(--muted); }
-.bars { display: flex; gap: 2px; height: 34px; }
-.bar { flex: 1 1 0; min-width: 0; border-radius: 2px; background: var(--none); position: relative; }
+.num { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+.comps { display: none; background: var(--panel); border-top: 1px solid var(--line); }
+.group.open .comps { display: block; }
+.comp { display: grid; grid-template-columns: 18px minmax(110px, 190px) 1fr 250px; align-items: center; gap: 10px; padding: 7px 14px; }
+.comp + .comp { border-top: 1px solid var(--line); }
+.comp .cname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bars { display: flex; gap: 1px; height: 22px; min-width: 0; }
+.bar { flex: 1 1 0; min-width: 0; border-radius: 2px; background: var(--none); }
 .bar.green { background: var(--green); } .bar.yellow { background: var(--yellow); } .bar.red { background: var(--red); }
-.bar:hover { filter: brightness(.9); }
-.bar .tip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 2;
-  background: var(--fg); color: var(--bg); font-size: 12px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
-.bar:hover .tip, .bar:focus .tip { display: block; }
-.bar:nth-child(-n+8) .tip { left: 0; transform: none; }
-.bar:nth-last-child(-n+8) .tip { left: auto; right: 0; transform: none; }
-.axis { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); }
-.axis .rule { flex: 1; height: 1px; background: var(--line); }
-.incident { padding: 14px 0; border-top: 1px solid var(--line); }
-.incident:first-child { border-top: 0; }
+.bar:hover, [data-tip]:hover { filter: brightness(.88); }
+svg.chart { width: 100%; height: 26px; display: block; overflow: visible; }
+svg.chart .p95 { fill: var(--none); stroke: none; }
+svg.chart .p50 { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+svg.chart .hit { fill: transparent; }
+svg.chart .hit:hover { fill: rgba(128,128,128,.18); }
+.empty { color: var(--muted); font-size: 13px; padding: 12px 14px; }
+#tip { position: fixed; z-index: 10; pointer-events: none; display: none; background: var(--fg); color: var(--bg); font-size: 12px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; max-width: 280px; white-space: pre-line; }
+details.past { margin-top: 14px; }
+details.past summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.incident { padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.incident:first-of-type { margin-top: 8px; }
 .incident a { font-weight: 600; text-decoration: none; }
 .incident a:hover { text-decoration: underline; }
-.incident .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
-.empty { color: var(--muted); }
-footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
-footer p { margin: 4px 0; }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
-.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--none); }
+.incident .meta { color: var(--muted); }
+footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
+footer p { margin: 3px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 14px; }
+.legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; background: var(--none); }
 .legend .g::before { background: var(--green); } .legend .y::before { background: var(--yellow); } .legend .r::before { background: var(--red); }
+@media (max-width: 640px) {
+  .ghead, .comp { grid-template-columns: 18px 1fr auto; }
+  .ghead .bars, .comp .bars, .comp svg.chart { grid-column: 1 / -1; order: 5; }
+  .ghead .gname, .comp .cname { grid-column: 2; }
+  .comp .cname { grid-column: 1 / 3; }
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1 id="title">Status</h1>
+    <div>
+      <h1 id="title">Status</h1>
+      <div class="sub" id="desc"></div>
+    </div>
     <div class="tools">
-      <div class="theme" role="group" aria-label="Theme">
+      <div class="seg" role="group" aria-label="Theme">
         <button type="button" data-theme-choice="system">Auto</button>
         <button type="button" data-theme-choice="light">Light</button>
         <button type="button" data-theme-choice="dark">Dark</button>
@@ -94,21 +125,35 @@ footer p { margin: 4px 0; }
   </header>
   <div id="banner" class="banner">Loading status…</div>
   <div id="notice" class="notice" hidden></div>
-  <h2>Services</h2>
-  <div id="components" class="components"></div>
-  <h2>Past incidents</h2>
-  <div id="incidents"></div>
+  <div id="ongoing" class="ongoing" hidden></div>
+  <div class="bar-tools">
+    <div class="left">
+      <div class="seg" id="ranges" role="group" aria-label="Time range"></div>
+      <div class="seg" id="metrics" role="group" aria-label="View">
+        <button type="button" data-metric="avail">Availability</button>
+        <button type="button" data-metric="latency">Latency</button>
+        <button type="button" data-metric="speed">Download speed</button>
+      </div>
+    </div>
+    <div><button type="button" class="link" id="toggleAll">Expand all</button></div>
+  </div>
+  <div id="groups" class="groups"></div>
+  <details class="past" id="past" hidden><summary id="pastTitle">Past incidents</summary><div id="incidents"></div></details>
   <footer>
-    <div class="legend"><span class="g">No problem detected</span><span class="y">Some failed or slow checks</span><span class="r">Many failed checks (5% or more)</span><span>No data</span></div>
+    <div class="legend" id="legend"></div>
     <p id="updated"></p>
     <p id="about"></p>
   </footer>
 </div>
+<div id="tip" role="tooltip"></div>
 <script>
 (function () {
-  var LABEL = { up: "Operational", degraded: "Degraded performance", down: "Outage", unknown: "No data" };
-  var cfg = { name: "", home_url: "", data_url: "status.json", fallback_url: null, refresh_seconds: 60 };
-  var last = null, refreshFailed = false;
+  var LABEL = { up: "Operational", degraded: "Degraded", down: "Outage", unknown: "No data" };
+  var RANK = { unknown: 0, up: 1, degraded: 2, down: 3 };
+  var RANGE_LABEL = { "24h": "24 hours", "7d": "7 days", "30d": "30 days", "90d": "90 days", "1y": "1 year" };
+  var cfg = { name: "", home_url: "", data_base: "", fallback_base: "", refresh_seconds: 60 };
+  var status = null, views = {}, refreshFailed = false;
+  var ui = { range: "90d", metric: "avail", open: null };   // open: null = automatic, else an object of group name -> bool
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function $(id) { return document.getElementById(id); }
@@ -119,7 +164,18 @@ footer p { margin: 4px 0; }
     if (m < 1440) return Math.round(m / 60) + " h ago";
     return Math.round(m / 1440) + " d ago";
   }
-  function fmtDay(s) { return new Date(s + "T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }); }
+  function fmtMs(v) { return v == null ? "–" : v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + " s" : Math.round(v) + " ms"; }
+  function fmtSpeed(v) { return v == null ? "–" : v.toFixed(v >= 10 ? 0 : 1) + " MB/s"; }
+  function fmtPct(v) { return v == null ? "–" : (v >= 100 ? "100" : v.toFixed(v >= 99.95 ? 2 : 1)) + "%"; }
+  function median(a) { a = a.slice().sort(function (x, y) { return x - y; }); var n = a.length; return n ? (n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2) : null; }
+
+  // ---- hash state: #r=7d&m=latency
+  function readHash() {
+    var p = {}; location.hash.replace(/^#/, "").split("&").forEach(function (kv) { var a = kv.split("="); if (a[0]) p[a[0]] = decodeURIComponent(a[1] || ""); });
+    if (RANGE_LABEL[p.r]) ui.range = p.r;
+    if (p.m === "latency" || p.m === "speed" || p.m === "avail") ui.metric = p.m;
+  }
+  function writeHash() { try { history.replaceState(null, "", "#r=" + ui.range + "&m=" + ui.metric); } catch (e) {} }
 
   // ---- theme: Auto follows the system (no attribute); Light and Dark are remembered
   function applyTheme(choice, save) {
@@ -135,6 +191,103 @@ footer p { margin: 4px 0; }
   });
   applyTheme(document.documentElement.dataset.theme || "system", false);
 
+  // ---- tooltip (one element for every bar and chart cell)
+  var tip = $("tip");
+  document.addEventListener("mouseover", function (e) {
+    var t = e.target.closest ? e.target.closest("[data-tip]") : null;
+    if (!t) { tip.style.display = "none"; return; }
+    tip.textContent = t.getAttribute("data-tip"); tip.style.display = "block";
+  });
+  document.addEventListener("mousemove", function (e) {
+    if (tip.style.display === "none") return;
+    var w = tip.offsetWidth, x = Math.min(e.clientX + 12, window.innerWidth - w - 8);
+    tip.style.left = Math.max(8, x) + "px"; tip.style.top = (e.clientY + 16 + tip.offsetHeight > window.innerHeight ? e.clientY - tip.offsetHeight - 10 : e.clientY + 16) + "px";
+  });
+  document.addEventListener("mouseleave", function () { tip.style.display = "none"; });
+
+  // ---- buckets
+  // One failed or slow check in a bucket is a blip (an outage needs two rounds in a row); two make it yellow,
+  // and failures of 5% of the checks (at least two) make it red. The tooltip always has the exact numbers.
+  function rowColor(r) {
+    if (!r) return "none";
+    if (r[2] >= 2 && r[2] / r[0] >= 0.05) return "red";
+    if (r[1] + r[2] >= 2) return "yellow";
+    return "green";
+  }
+  function bucketLabel(view, i) {
+    var step = view.step_seconds * 1000, t0 = new Date(view.start).getTime() + i * step, t1 = t0 + step;
+    var d0 = new Date(t0), d1 = new Date(t1 - 1);
+    var day = { month: "short", day: "numeric" }, hm = { hour: "2-digit", minute: "2-digit" };
+    if (view.step_seconds >= 604800) return "Week of " + d0.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+    if (view.step_seconds >= 86400) return d0.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    return d0.toLocaleDateString(undefined, day) + " " + d0.toLocaleTimeString(undefined, hm) + " – " + d1.toLocaleTimeString(undefined, hm);
+  }
+  function rowText(view, i, r) {
+    var head = bucketLabel(view, i);
+    if (!r) return head + "\nno data";
+    var s = head + "\n" + fmtPct(100 * (r[0] - r[2]) / r[0]) + " up · " + r[0] + " checks";
+    if (r[2]) s += " · " + r[2] + " failed";
+    if (r[1]) s += " · " + r[1] + " slow";
+    if (r[3] != null) s += "\np50 " + fmtMs(r[3]) + " · p95 " + fmtMs(r[4]);
+    if (r[5] != null) s += "\nspeed " + fmtSpeed(r[5]);
+    return s;
+  }
+  function barsFor(view, rowsOf) {   // rowsOf(i) -> {color, text}
+    var bars = el("div", "bars");
+    for (var i = 0; i < view.count; i++) {
+      var c = rowsOf(i), b = el("div", "bar " + c.color); b.setAttribute("data-tip", c.text); bars.appendChild(b);
+    }
+    return bars;
+  }
+  function groupColor(cells) {
+    var seen = { red: 0, yellow: 0, green: 0 };
+    cells.forEach(function (c) { if (seen[c] != null) seen[c]++; });
+    return seen.red ? "red" : seen.yellow ? "yellow" : seen.green ? "green" : "none";
+  }
+  function chart(view, rows, key) {   // key: "latency" (p50 line + p95 area) or "speed"
+    var n = view.count, H = 26, vals = [], hi = 0;
+    rows.forEach(function (r) {
+      var lo = r ? (key === "speed" ? r[5] : r[3]) : null, up = r ? (key === "speed" ? r[5] : r[4]) : null;
+      vals.push([lo, up]); if (up != null && up > hi) hi = up;
+    });
+    var svgNS = "http://www.w3.org/2000/svg", svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("class", "chart"); svg.setAttribute("viewBox", "0 0 " + n + " " + H); svg.setAttribute("preserveAspectRatio", "none");
+    if (key === "latency") {   // outliers must not flatten the median: the shade is clipped at 4x the typical median
+      var mids = vals.map(function (p) { return p[0]; }).filter(function (v) { return v != null; });
+      if (mids.length) hi = Math.min(hi, 4 * median(mids));
+    }
+    if (hi <= 0) hi = 1;
+    function y(v) { return (H - 2 - (Math.min(v, hi) / hi) * (H - 4)).toFixed(2); }
+    var area = "", line = "", open = false, started = false;
+    vals.forEach(function (p, i) {
+      if (p[0] == null) { open = false; return; }
+      line += (open ? "L" : "M") + (i + 0.5) + " " + y(p[0]); open = true;
+    });
+    if (key === "latency") {
+      var top = [], bottom = [];
+      vals.forEach(function (p, i) { if (p[1] != null) { top.push((i + 0.5) + " " + y(p[1])); bottom.unshift((i + 0.5) + " " + y(p[0])); } });
+      if (top.length) area = "M" + top.join("L") + "L" + bottom.join("L") + "Z";
+      if (area) { var a = document.createElementNS(svgNS, "path"); a.setAttribute("d", area); a.setAttribute("class", "p95"); svg.appendChild(a); }
+    }
+    if (line) { var l = document.createElementNS(svgNS, "path"); l.setAttribute("d", line); l.setAttribute("class", "p50"); svg.appendChild(l); }
+    rows.forEach(function (r, i) {
+      var rect = document.createElementNS(svgNS, "rect");
+      rect.setAttribute("x", i); rect.setAttribute("y", 0); rect.setAttribute("width", 1); rect.setAttribute("height", H); rect.setAttribute("class", "hit");
+      rect.setAttribute("data-tip", rowText(view, i, r)); svg.appendChild(rect);
+    });
+    return svg;
+  }
+  function summaryOf(rows, metric) {
+    var live = rows.filter(function (r) { return r; });
+    if (metric === "latency") {
+      var p50 = live.map(function (r) { return r[3]; }).filter(function (v) { return v != null; });
+      var p95 = live.map(function (r) { return r[4]; }).filter(function (v) { return v != null; });
+      return p50.length ? "p50 " + fmtMs(median(p50)) + " · p95 " + fmtMs(median(p95)) : "no data";
+    }
+    var sp = live.map(function (r) { return r[5]; }).filter(function (v) { return v != null; });
+    return sp.length ? "avg " + fmtSpeed(sp.reduce(function (a, b) { return a + b; }, 0) / sp.length) + " · min " + fmtSpeed(Math.min.apply(null, sp)) : "no data";
+  }
+
   // ---- rendering
   function overall(cs, stale) {
     var states = cs.map(function (c) { return c.state; });
@@ -146,97 +299,163 @@ footer p { margin: 4px 0; }
     if (states.indexOf("degraded") >= 0) return ["Degraded performance", "yellow"];
     return ["All systems operational", "green"];
   }
-  function render(d) {
-    var now = new Date();
-    var cs = d.components || [];
+  function isOpen(group, worst) {
+    if (ui.open && ui.open[group] != null) return ui.open[group];
+    return worst === "degraded" || worst === "down";   // a group with a problem opens by itself; the rest stay folded
+  }
+  function render() {
+    var d = status; if (!d) return;
+    var now = new Date(), cs = d.components || [];
     var name = (d.instance && d.instance.name) || cfg.name;
     if (name) { $("title").textContent = name + " Status"; document.title = name + " Status"; }
+    $("desc").textContent = (d.instance && d.instance.description) || "";
     var home = (d.instance && d.instance.home_url) || cfg.home_url;
     if (home) { $("home").href = home; $("home").textContent = "Go to " + (name || "the site"); $("home").hidden = false; }
-    var interval = d.interval_seconds || 300;
-    var staleMin = Math.max(15, Math.ceil(3 * interval / 60));
+    var interval = d.interval_seconds || 300, staleMin = Math.max(15, Math.ceil(3 * interval / 60));
     var newest = cs.reduce(function (a, c) { return c.checked_at && (!a || c.checked_at > a) ? c.checked_at : a; }, null);
     var stale = !!newest && (now - new Date(newest)) > staleMin * 60000;
     var o = overall(cs, stale);
     $("banner").textContent = o[0]; $("banner").className = "banner " + o[1];
     var notice = $("notice"); notice.hidden = true;
-    if (stale) {
-      notice.hidden = false;
-      notice.textContent = "The last check was " + ago(newest, now) + ". The monitor may have stopped, so the states below can be out of date.";
-    } else if (refreshFailed) {
-      notice.hidden = false;
-      notice.textContent = "Could not reload the status data just now. Showing the copy built " + ago(d.generated_at, now) + "; this page will try again.";
-    }
-    var box = $("components"); box.textContent = "";
-    cs.forEach(function (c) {
-      var item = el("div", "component");
-      var row = el("div", "row");
-      row.appendChild(el("span", "name", c.name));
-      row.appendChild(el("span", "state " + (stale ? "unknown" : c.state), (stale && c.state !== "unknown" ? "Last known: " : "") + LABEL[c.state]));
-      item.appendChild(row);
-      var bars = el("div", "bars");
-      c.bars.forEach(function (b) {
-        var bar = el("div", "bar " + b.color); bar.tabIndex = 0;
-        var tip = el("div", "tip");
-        var text = fmtDay(b.date);
-        if (b.uptime == null) text += " · no data";
-        else text += " · " + b.uptime + "% up" + (b.down ? " · " + b.down + " failed" : "") + (b.degraded ? " · " + b.degraded + " slow" : "");
-        tip.textContent = text; bar.appendChild(tip); bars.appendChild(bar);
-      });
-      item.appendChild(bars);
-      var axis = el("div", "axis");
-      axis.appendChild(el("span", "", d.days + " days ago"));
-      axis.appendChild(el("span", "rule"));
-      axis.appendChild(el("span", "", c.uptime == null ? "no data" : c.uptime + "% uptime"));
-      axis.appendChild(el("span", "rule"));
-      axis.appendChild(el("span", "", "Today"));
-      item.appendChild(axis);
-      box.appendChild(item);
+    if (stale) { notice.hidden = false; notice.textContent = "The last check was " + ago(newest, now) + ". The monitor may have stopped, so the states below can be out of date."; }
+    else if (refreshFailed) { notice.hidden = false; notice.textContent = "Could not reload the status data just now. Showing the copy built " + ago(d.generated_at, now) + "; this page will try again."; }
+
+    // controls
+    var rangeBox = $("ranges"); rangeBox.textContent = "";
+    (d.ranges || Object.keys(RANGE_LABEL)).forEach(function (r) {
+      var b = el("button", "", r); b.type = "button"; b.title = "Last " + RANGE_LABEL[r]; b.setAttribute("aria-pressed", String(r === ui.range));
+      b.addEventListener("click", function () { ui.range = r; writeHash(); loadView().then(render); render(); });
+      rangeBox.appendChild(b);
     });
-    var inc = $("incidents"); inc.textContent = "";
+    var hasSpeed = cs.some(function (c) { return c.has_speed; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-metric]"), function (b) {
+      var m = b.getAttribute("data-metric"); b.setAttribute("aria-pressed", String(m === ui.metric));
+      b.disabled = m === "speed" && !hasSpeed;
+      b.onclick = function () { ui.metric = m; writeHash(); render(); };
+    });
+    if (ui.metric === "speed" && !hasSpeed) ui.metric = "avail";
+
+    var view = views[ui.range];
+    var box = $("groups"); box.textContent = "";
+    var anyOpen = false, anyClosed = false, shown = 0;
+    (d.groups || []).forEach(function (g) {
+      var members = g.components.map(function (n) { return cs.filter(function (c) { return c.name === n; })[0]; }).filter(function (c) { return c && (ui.metric !== "speed" || c.has_speed); });
+      if (!members.length) return;
+      shown++;
+      var worst = members.reduce(function (w, c) { return RANK[c.state] > RANK[w] ? c.state : w; }, "up");
+      if (members.every(function (c) { return c.state === "unknown"; })) worst = "unknown";
+      var open = isOpen(g.name, worst);
+      if (open) anyOpen = true; else anyClosed = true;
+      var grp = el("div", "group" + (open ? " open" : ""));
+      var head = el("button", "ghead"); head.type = "button"; head.setAttribute("aria-expanded", String(open));
+      head.appendChild(el("span", "chev"));
+      var gn = el("span", "gname", g.name); gn.appendChild(el("small", "", String(members.length))); head.appendChild(gn);
+      var mid;
+      if (view && ui.metric === "avail") {
+        mid = barsFor(view, function (i) {
+          var rows = members.map(function (c) { return (view.components[c.name] || [])[i]; });
+          var col = groupColor(rows.map(rowColor));
+          var failed = rows.reduce(function (a, r) { return a + (r ? r[2] : 0); }, 0), n = rows.reduce(function (a, r) { return a + (r ? r[0] : 0); }, 0);
+          return { color: col, text: bucketLabel(view, i) + (n ? "\n" + g.name + ": " + fmtPct(100 * (n - failed) / n) + " up" + (failed ? " · " + failed + " failed" : "") : "\nno data") };
+        });
+      } else { mid = el("span", "num", ""); mid.style.textAlign = "left"; mid.textContent = view ? "" : "loading…"; }
+      head.appendChild(mid);
+      var right = el("span", "right");
+      right.appendChild(el("span", "state " + (stale ? "unknown" : worst), stale ? "Last known: " + LABEL[worst] : LABEL[worst]));
+      var upt = members.map(function (c) { return c.uptime ? c.uptime[ui.range] : null; }).filter(function (v) { return v != null; });
+      if (ui.metric === "avail") right.appendChild(el("span", "num", upt.length ? fmtPct(Math.min.apply(null, upt)) : "–"));
+      head.appendChild(right);
+      head.addEventListener("click", function () { ui.open = ui.open || {}; ui.open[g.name] = !open; render(); });
+      grp.appendChild(head);
+      var comps = el("div", "comps");
+      members.forEach(function (c) {
+        var row = el("div", "comp"); row.appendChild(el("span", ""));
+        row.appendChild(el("span", "cname", c.name));
+        var rows = view ? (view.components[c.name] || []) : null;
+        if (!view) row.appendChild(el("span", "num", "loading…"));
+        else if (ui.metric === "avail") row.appendChild(barsFor(view, function (i) { return { color: rowColor(rows[i]), text: c.name + "\n" + rowText(view, i, rows[i]) }; }));
+        else row.appendChild(chart(view, rows, ui.metric));
+        var r = el("span", "right");
+        if (ui.metric === "avail") {
+          r.appendChild(el("span", "num", c.ms != null && c.state !== "down" ? fmtMs(c.ms) : ""));
+          r.appendChild(el("span", "state " + (stale ? "unknown" : c.state), LABEL[c.state]));
+          r.appendChild(el("span", "num", fmtPct(c.uptime ? c.uptime[ui.range] : null)));
+        } else {
+          r.appendChild(el("span", "num", rows ? summaryOf(rows, ui.metric) : ""));
+        }
+        row.appendChild(r); comps.appendChild(row);
+      });
+      grp.appendChild(comps); box.appendChild(grp);
+    });
+    if (!shown) box.appendChild(el("div", "empty", cs.length ? "Nothing to show for this view." : "No components yet."));
+    $("toggleAll").textContent = anyClosed ? "Expand all" : "Collapse all";
+    $("toggleAll").onclick = function () { var to = anyClosed; ui.open = {}; (d.groups || []).forEach(function (g) { ui.open[g.name] = to; }); render(); };
+
+    // incidents: ongoing ones next to the banner, the rest folded
     var list = (d.incidents || []).slice().sort(function (a, b) { return a.opened_at < b.opened_at ? 1 : -1; });
-    if (!list.length) inc.appendChild(el("p", "empty", "No incidents in the last " + (d.days || 90) + " days."));
-    list.forEach(function (i) {
+    var ongoing = list.filter(function (i) { return !i.closed_at; }), past = list.filter(function (i) { return i.closed_at; });
+    var og = $("ongoing"); og.hidden = !ongoing.length; og.textContent = "";
+    ongoing.forEach(function (i) {
+      var line = el("div", ""); var t = i.url && /^https:\/\//.test(i.url) ? el("a", "", i.title) : el("strong", "", i.title);
+      if (i.url && t.tagName === "A") { t.href = i.url; t.rel = "noopener"; }
+      line.appendChild(t); line.appendChild(document.createTextNode(" · since " + new Date(i.opened_at).toLocaleString())); og.appendChild(line);
+    });
+    $("past").hidden = false; $("pastTitle").textContent = "Past incidents (" + past.length + ")";
+    var inc = $("incidents"); inc.textContent = "";
+    if (!past.length) inc.appendChild(el("p", "empty", "No resolved incidents in the last year."));
+    past.forEach(function (i) {
       var item = el("div", "incident");
-      if (i.url) { var a = el("a", "", i.title); a.href = i.url; a.rel = "noopener"; item.appendChild(a); }
-      else item.appendChild(el("strong", "", i.title));
-      var when = new Date(i.opened_at).toLocaleString();
-      item.appendChild(el("div", "meta", i.closed_at ? "Resolved · " + when + " – " + new Date(i.closed_at).toLocaleString() : "Ongoing since " + when));
+      if (i.url && /^https:\/\//.test(i.url)) { var a = el("a", "", i.title); a.href = i.url; a.rel = "noopener"; item.appendChild(a); } else item.appendChild(el("strong", "", i.title));
+      item.appendChild(el("div", "meta", new Date(i.opened_at).toLocaleString() + " – " + new Date(i.closed_at).toLocaleString()));
       inc.appendChild(item);
     });
-    $("updated").textContent = d.generated_at ? "Last check " + (newest ? ago(newest, now) : "unknown") + "." : "";
+
+    var lg = $("legend"); lg.textContent = "";
+    if (ui.metric === "avail") {
+      [["g", "No problem detected"], ["y", "Two or more failed or slow checks"], ["r", "5% or more of the checks failed"], ["", "No data"]].forEach(function (x) { lg.appendChild(el("span", x[0], x[1])); });
+    } else {
+      lg.appendChild(el("span", "", ui.metric === "latency" ? "Line: median response time · shade: slowest 5% (clipped at 4× the median)" : "Line: average speed of a 1 MiB ranged download"));
+    }
+    $("updated").textContent = "Last check " + (newest ? ago(newest, now) : "unknown") + " · showing the last " + RANGE_LABEL[ui.range] + ".";
     $("about").textContent = "Checks run from GitHub's servers about every " + Math.max(1, Math.round(interval / 60)) + " minute(s) against public pages only. A problem in one region or in a feature that needs a login may not show here.";
   }
 
   // ---- loading: the data lives on the `status` branch, so refreshing needs no deployment
-  function hovering() { return !!document.querySelector(".bar:hover"); }
-  function getJson(url) {
+  function hovering() { return !!document.querySelector("[data-tip]:hover"); }
+  function getJson(base, path) {
     // One query value per refresh period: visitors share a cache entry, and a CDN cache cannot hide a new build.
-    var sep = url.indexOf("?") >= 0 ? "&" : "?";
-    return fetch(url + sep + "t=" + Math.floor(Date.now() / (cfg.refresh_seconds * 1000)), { cache: "no-store" })
+    return fetch(base + path + "?t=" + Math.floor(Date.now() / (cfg.refresh_seconds * 1000)), { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
   }
-  function fetchStatus() {
-    var urls = [cfg.data_url].concat(cfg.fallback_url ? [cfg.fallback_url] : []);
-    return urls.reduce(function (p, url) {
+  function fetchJson(path, valid) {
+    return [cfg.data_base, cfg.fallback_base].reduce(function (p, base, i) {
       return p.catch(function () {
-        return getJson(url).then(function (d) { if (!d || !Array.isArray(d.components)) throw new Error("no data"); return d; });
+        if (i === 1 && cfg.data_base === cfg.fallback_base) throw new Error("no more sources");
+        return getJson(base || "", path).then(function (d) { if (!valid(d)) throw new Error("no data"); return d; });
       });
     }, Promise.reject(new Error("start")));
   }
-  function load() {
-    return fetchStatus()
-      .then(function (d) { last = d; refreshFailed = false; if (!hovering()) render(d); })
-      .catch(function () {
-        if (last) { refreshFailed = true; if (!hovering()) render(last); return; }
-        $("banner").textContent = "Could not load the status data"; $("banner").className = "banner yellow";
-      });
+  function loadStatus() {
+    return fetchJson("status.json", function (d) { return d && Array.isArray(d.components); })
+      .then(function (d) { status = d; refreshFailed = false; }, function () { refreshFailed = true; });
+  }
+  function loadView() {
+    var r = ui.range;
+    return fetchJson("view/" + r + ".json", function (d) { return d && d.components && d.count; })
+      .then(function (v) { views[r] = v; }, function () {});
+  }
+  function refresh() {
+    return Promise.all([loadStatus(), loadView()]).then(function () {
+      if (!status) { $("banner").textContent = "Could not load the status data"; $("banner").className = "banner yellow"; return; }
+      if (!hovering()) render();
+    });
   }
   function start() {
-    load();
-    setInterval(function () { if (!document.hidden) load(); }, cfg.refresh_seconds * 1000);
-    document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
-    window.addEventListener("online", load);
+    readHash(); refresh();
+    setInterval(function () { if (!document.hidden) refresh(); }, cfg.refresh_seconds * 1000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(); });
+    window.addEventListener("online", refresh);
+    window.addEventListener("hashchange", function () { readHash(); loadView().then(render); render(); });
   }
   fetch("config.json", { cache: "no-store" })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })

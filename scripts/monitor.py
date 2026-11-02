@@ -66,6 +66,7 @@ def main(argv=None):
     token = os.environ.get("GITHUB_TOKEN")
     header = "Authorization: Basic " + base64.b64encode(f"x-access-token:{token}".encode()).decode() if token else None
     gh = GhCli(repo)
+    notify = s.make_notifier()
 
     try:
         print("restored the data branch" if s.restore(args.data_dir, remote, header) else "no data branch yet, starting empty", flush=True)
@@ -77,7 +78,7 @@ def main(argv=None):
         started = time.time()
         now = datetime.now(timezone.utc)
         try:
-            status = s.tick(cfg, args.data_dir, now, gh)
+            status = s.tick(cfg, args.data_dir, now, gh, notify=notify)
             print(s.iso(now), describe(status), flush=True)
         except Exception as err:
             print(s.iso(now), "check failed:", why(err), flush=True)

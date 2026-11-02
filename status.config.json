@@ -1,16 +1,54 @@
 {
   "name": "DeepGHS Hub",
   "base_url": "https://hub.deepghs.org",
+  "description": "Public status of the DeepGHS Hub, a CheeseCave instance.",
   "components": [
-    { "name": "Website", "path": "/" },
-    { "name": "API", "path": "/api/version", "expect_json": { "api": "cheesecave" } },
-    { "name": "Repository listing", "path": "/api/datasets/deepghs/gelbooru_full/tree/main" },
+    { "name": "Website", "group": "Web", "path": "/" },
+    { "name": "Site configuration", "group": "Web", "path": "/api/site-config" },
+
+    { "name": "API", "group": "API", "path": "/api/version", "expect_json": { "api": "cheesecave" } },
+    { "name": "Repository listing", "group": "API", "path": "/api/models?limit=1" },
+    { "name": "Trending", "group": "API", "path": "/api/trending" },
+
+    { "name": "File tree", "group": "Repositories", "path": "/api/datasets/deepghs/gelbooru_full/tree/main" },
+    { "name": "Commit history", "group": "Repositories", "path": "/api/datasets/deepghs/gelbooru_full/commits/main?limit=1" },
+
     {
-      "name": "File download",
+      "name": "Git fetch",
+      "group": "Git",
+      "path": "/datasets/deepghs/gelbooru_full.git/info/refs?service=git-upload-pack",
+      "expect_text": "git-upload-pack",
+      "max_bytes": 4096
+    },
+    {
+      "name": "Git LFS",
+      "group": "Git",
+      "path": "/datasets/deepghs/gelbooru_full.git/info/lfs/objects/batch",
+      "method": "POST",
+      "body": "{\"operation\":\"download\",\"transfers\":[\"basic\"],\"objects\":[]}",
+      "headers": { "Content-Type": "application/vnd.git-lfs+json", "Accept": "application/vnd.git-lfs+json" },
+      "expect_json": { "transfer": "basic" }
+    },
+
+    {
+      "name": "Small file download",
+      "group": "Storage and downloads",
       "path": "/datasets/deepghs/gelbooru_full/resolve/main/meta.json",
       "headers": { "Range": "bytes=0-1023" },
       "expect_status": [200, 206],
       "max_bytes": 2048
-    }
+    },
+    {
+      "name": "Download speed",
+      "group": "Storage and downloads",
+      "path": "/datasets/deepghs/gelbooru_full/resolve/main/images/0000.tar",
+      "headers": { "Range": "bytes=0-1048575" },
+      "expect_status": [200, 206],
+      "max_bytes": 1048576,
+      "speed": true,
+      "min_speed": 0.5,
+      "degraded_ms": 15000
+    },
+    { "name": "Avatar", "group": "Storage and downloads", "path": "/api/organizations/deepghs/avatar", "max_bytes": 4096 }
   ]
 }
