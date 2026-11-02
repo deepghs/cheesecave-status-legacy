@@ -113,9 +113,13 @@ footer p { margin: 4px 0; }
     var banner = document.getElementById("banner");
     banner.textContent = o[0]; banner.className = "banner " + o[1];
     var notice = document.getElementById("notice");
+    notice.hidden = true;
     if (stale && newest) {
       notice.hidden = false;
       notice.textContent = "The last check was " + ago(newest, now) + ". The monitor may have stopped, so the states below can be out of date.";
+    } else if (refreshFailed) {
+      notice.hidden = false;
+      notice.textContent = "Could not reload the status data just now. Showing the copy built " + ago(d.generated_at, now) + "; this page will try again.";
     }
     var box = document.getElementById("components"); box.textContent = "";
     cs.forEach(function (c) {
@@ -155,9 +159,23 @@ footer p { margin: 4px 0; }
     });
     document.getElementById("updated").textContent = "Page data built " + ago(d.generated_at, now) + (newest ? "; last check " + ago(newest, now) + "." : ".");
   }
-  fetch("status.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(render)
-    .catch(function () { var b = document.getElementById("banner"); b.textContent = "Could not load the status data"; b.className = "banner yellow"; });
+  var REFRESH_MS = 60000;
+  var last = null, refreshFailed = false;
+  function hovering() { return !!document.querySelector(".bar:hover"); }
+  function load() {
+    // One query value per minute: visitors share a cache entry, and the CDN's 10-minute cache cannot hide a new build.
+    return fetch("status.json?t=" + Math.floor(Date.now() / REFRESH_MS), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) { last = d; refreshFailed = false; if (!hovering()) render(d); })
+      .catch(function () {
+        if (last) { refreshFailed = true; if (!hovering()) render(last); return; }
+        var b = document.getElementById("banner"); b.textContent = "Could not load the status data"; b.className = "banner yellow";
+      });
+  }
+  load();
+  setInterval(function () { if (!document.hidden) load(); }, REFRESH_MS);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+  window.addEventListener("online", load);
 })();
 </script>
 </body>
