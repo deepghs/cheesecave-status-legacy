@@ -1,0 +1,48 @@
+# The page itself. It is deployed only when the page, its config or its scripts change (and once per
+# monitor run, to refresh the fallback copy of the data): the live data is read by the page from the
+# `status` branch, so a new check never needs a deployment.
+name: Pages
+on:
+  push:
+    branches: [master]
+    paths:
+      - "site/**"
+      - "scripts/**"
+      - "status.config.json"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+concurrency:
+  group: pages
+  cancel-in-progress: true
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test
+        run: python3 -I scripts/test_statuslib.py
+      - name: Fetch the current data for the fallback copy
+        run: |
+          git fetch --quiet --depth 1 origin status && git show FETCH_HEAD:status.json > "$RUNNER_TEMP/status.json" || echo "no data branch yet"
+      - name: Build
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/build_pages.py --out public --status-json "$RUNNER_TEMP/status.json"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+  deploy:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

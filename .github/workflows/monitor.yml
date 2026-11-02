@@ -1,0 +1,38 @@
+# The checks. GitHub's own `schedule` trigger is best-effort (on this repository it fired about every
+# 3 hours instead of every 5 minutes), so one run of this workflow is one long job that checks in a
+# loop and publishes the data to the `status` branch itself. It stops before the 6 hour limit and starts
+# the next copy (queued behind it by the concurrency group, so there is no gap). The hourly schedule is
+# only a safety net that restarts the chain if it ever broke. No secret is needed: the default token may
+# push the data branch, open issues and dispatch workflows.
+name: Monitor
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+permissions:
+  contents: write
+  issues: write
+  actions: write
+jobs:
+  monitor:
+    name: Check in a loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check every interval of status.config.json
+        run: python3 scripts/monitor.py --minutes 335
+      - name: Refresh the fallback copy of the page and start the next copy
+        if: ${{ !cancelled() }}
+        run: |
+          gh workflow run pages.yml --ref "${GITHUB_REF_NAME}"
+          gh workflow run monitor.yml --ref "${GITHUB_REF_NAME}"

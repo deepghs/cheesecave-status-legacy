@@ -3,34 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CheeseCave Status</title>
-<meta name="description" content="Current status and 90-day history of CheeseCave: website, API, repository listing and file download.">
+<title>Status</title>
+<script>
+// Apply the saved theme before the first paint (no flash); "system" is the absence of the attribute.
+try { var t = localStorage.getItem("status-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
 :root {
-  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --card: #ffffff;
+  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --hover: #f3f4f6;
   --green: #2eb872; --yellow: #f0b429; --red: #e5484d; --none: #e6e9ed;
-  --banner-green: #e8f7ef; --banner-yellow: #fff6dd; --banner-red: #fdebec; --banner-grey: #eef0f2;
+  --ok-bg: #e8f7ef; --ok-fg: #1b7a4d; --warn-bg: #fff6dd; --warn-fg: #8a6100; --bad-bg: #fdebec; --bad-fg: #b4232a; --idle-bg: #eef0f2; --idle-fg: #424a53;
+  --degraded: #b98200;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --card: #0d1117; --none: #2d333b;
-    --banner-green: #12261c; --banner-yellow: #2b2410; --banner-red: #2d1517; --banner-grey: #161b22; }
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --hover: #1c2128; --none: #2d333b;
+    --ok-bg: #12261c; --ok-fg: #56d28f; --warn-bg: #2b2410; --warn-fg: #f0c24a; --bad-bg: #2d1517; --bad-fg: #ff7b80; --idle-bg: #161b22; --idle-fg: #c9d1d9;
+    --degraded: #e0a800; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; --hover: #1c2128; --none: #2d333b;
+  --ok-bg: #12261c; --ok-fg: #56d28f; --warn-bg: #2b2410; --warn-fg: #f0c24a; --bad-bg: #2d1517; --bad-fg: #ff7b80; --idle-bg: #161b22; --idle-fg: #c9d1d9;
+  --degraded: #e0a800; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
 a { color: inherit; }
 .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 64px; }
-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 28px 0 20px; }
+header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 28px 0 20px; }
 header h1 { margin: 0; font-size: 20px; font-weight: 650; }
-header a.back { font-size: 14px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; }
-header a.back:hover { color: var(--fg); }
-.banner { border-radius: 8px; padding: 18px 20px; font-size: 18px; font-weight: 600; background: var(--banner-grey); }
-.banner.green { background: var(--banner-green); color: #1b7a4d; }
-.banner.yellow { background: var(--banner-yellow); color: #8a6100; }
-.banner.red { background: var(--banner-red); color: #b4232a; }
-@media (prefers-color-scheme: dark) { .banner.green { color: #56d28f; } .banner.yellow { color: #f0c24a; } .banner.red { color: #ff7b80; } }
-.notice { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--banner-yellow); color: #8a6100; font-size: 14px; }
-@media (prefers-color-scheme: dark) { .notice { color: #f0c24a; } }
+.tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.back { font-size: 14px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; }
+.back:hover { color: var(--fg); background: var(--hover); }
+.theme { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.theme button { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 5px 10px; cursor: pointer; }
+.theme button + button { border-left: 1px solid var(--line); }
+.theme button:hover { background: var(--hover); color: var(--fg); }
+.theme button[aria-pressed="true"] { background: var(--idle-bg); color: var(--fg); font-weight: 600; }
+.banner { border-radius: 8px; padding: 18px 20px; font-size: 18px; font-weight: 600; background: var(--idle-bg); color: var(--idle-fg); }
+.banner.green { background: var(--ok-bg); color: var(--ok-fg); }
+.banner.yellow { background: var(--warn-bg); color: var(--warn-fg); }
+.banner.red { background: var(--bad-bg); color: var(--bad-fg); }
+.notice { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; }
 h2 { font-size: 16px; margin: 36px 0 12px; }
 .components { border: 1px solid var(--line); border-radius: 8px; }
 .component { padding: 16px 18px; }
@@ -38,7 +54,7 @@ h2 { font-size: 16px; margin: 36px 0 12px; }
 .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .name { font-weight: 600; }
 .state { font-size: 14px; font-weight: 600; white-space: nowrap; }
-.state.up { color: var(--green); } .state.degraded { color: #b98200; } .state.down { color: var(--red); } .state.unknown { color: var(--muted); }
+.state.up { color: var(--green); } .state.degraded { color: var(--degraded); } .state.down { color: var(--red); } .state.unknown { color: var(--muted); }
 .bars { display: flex; gap: 2px; height: 34px; }
 .bar { flex: 1 1 0; min-width: 0; border-radius: 2px; background: var(--none); position: relative; }
 .bar.green { background: var(--green); } .bar.yellow { background: var(--yellow); } .bar.red { background: var(--red); }
@@ -66,8 +82,15 @@ footer p { margin: 4px 0; }
 <body>
 <div class="wrap">
   <header>
-    <h1>CheeseCave Status</h1>
-    <a class="back" href="https://hub.deepghs.org">Go to CheeseCave</a>
+    <h1 id="title">Status</h1>
+    <div class="tools">
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-choice="system">Auto</button>
+        <button type="button" data-theme-choice="light">Light</button>
+        <button type="button" data-theme-choice="dark">Dark</button>
+      </div>
+      <a id="home" class="back" href="#" hidden>Go to the site</a>
+    </div>
   </header>
   <div id="banner" class="banner">Loading status…</div>
   <div id="notice" class="notice" hidden></div>
@@ -78,14 +101,17 @@ footer p { margin: 4px 0; }
   <footer>
     <div class="legend"><span class="g">No problem detected</span><span class="y">Some failed or slow checks</span><span class="r">Many failed checks (5% or more)</span><span>No data</span></div>
     <p id="updated"></p>
-    <p>Checks run from GitHub's servers about every 5 minutes against public pages only. A problem in one region or in a feature that needs a login may not show here.</p>
+    <p id="about"></p>
   </footer>
 </div>
 <script>
 (function () {
-  var STALE_MIN = 30;
   var LABEL = { up: "Operational", degraded: "Degraded performance", down: "Outage", unknown: "No data" };
+  var cfg = { name: "", home_url: "", data_url: "status.json", fallback_url: null, refresh_seconds: 60 };
+  var last = null, refreshFailed = false;
+
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function $(id) { return document.getElementById(id); }
   function ago(iso, now) {
     var m = Math.max(0, Math.round((now - new Date(iso)) / 60000));
     if (m < 1) return "just now";
@@ -94,6 +120,22 @@ footer p { margin: 4px 0; }
     return Math.round(m / 1440) + " d ago";
   }
   function fmtDay(s) { return new Date(s + "T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }); }
+
+  // ---- theme: Auto follows the system (no attribute); Light and Dark are remembered
+  function applyTheme(choice, save) {
+    var root = document.documentElement;
+    if (choice === "light" || choice === "dark") root.dataset.theme = choice; else delete root.dataset.theme;
+    if (save) { try { if (choice === "system") localStorage.removeItem("status-theme"); else localStorage.setItem("status-theme", choice); } catch (e) {} }
+    Array.prototype.forEach.call(document.querySelectorAll("[data-theme-choice]"), function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-theme-choice") === (choice === "light" || choice === "dark" ? choice : "system")));
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-theme-choice]"), function (b) {
+    b.addEventListener("click", function () { applyTheme(b.getAttribute("data-theme-choice"), true); });
+  });
+  applyTheme(document.documentElement.dataset.theme || "system", false);
+
+  // ---- rendering
   function overall(cs, stale) {
     var states = cs.map(function (c) { return c.state; });
     if (!states.length || states.every(function (s) { return s === "unknown"; })) return ["No data yet", ""];
@@ -106,22 +148,26 @@ footer p { margin: 4px 0; }
   }
   function render(d) {
     var now = new Date();
-    var cs = d.components;
+    var cs = d.components || [];
+    var name = (d.instance && d.instance.name) || cfg.name;
+    if (name) { $("title").textContent = name + " Status"; document.title = name + " Status"; }
+    var home = (d.instance && d.instance.home_url) || cfg.home_url;
+    if (home) { $("home").href = home; $("home").textContent = "Go to " + (name || "the site"); $("home").hidden = false; }
+    var interval = d.interval_seconds || 300;
+    var staleMin = Math.max(15, Math.ceil(3 * interval / 60));
     var newest = cs.reduce(function (a, c) { return c.checked_at && (!a || c.checked_at > a) ? c.checked_at : a; }, null);
-    var stale = !newest || (now - new Date(newest)) > STALE_MIN * 60000;
+    var stale = !!newest && (now - new Date(newest)) > staleMin * 60000;
     var o = overall(cs, stale);
-    var banner = document.getElementById("banner");
-    banner.textContent = o[0]; banner.className = "banner " + o[1];
-    var notice = document.getElementById("notice");
-    notice.hidden = true;
-    if (stale && newest) {
+    $("banner").textContent = o[0]; $("banner").className = "banner " + o[1];
+    var notice = $("notice"); notice.hidden = true;
+    if (stale) {
       notice.hidden = false;
       notice.textContent = "The last check was " + ago(newest, now) + ". The monitor may have stopped, so the states below can be out of date.";
     } else if (refreshFailed) {
       notice.hidden = false;
       notice.textContent = "Could not reload the status data just now. Showing the copy built " + ago(d.generated_at, now) + "; this page will try again.";
     }
-    var box = document.getElementById("components"); box.textContent = "";
+    var box = $("components"); box.textContent = "";
     cs.forEach(function (c) {
       var item = el("div", "component");
       var row = el("div", "row");
@@ -147,35 +193,56 @@ footer p { margin: 4px 0; }
       item.appendChild(axis);
       box.appendChild(item);
     });
-    var inc = document.getElementById("incidents"); inc.textContent = "";
-    if (!d.incidents.length) inc.appendChild(el("p", "empty", "No incidents in the last " + d.days + " days."));
-    d.incidents.slice().sort(function (a, b) { return a.opened_at < b.opened_at ? 1 : -1; }).forEach(function (i) {
+    var inc = $("incidents"); inc.textContent = "";
+    var list = (d.incidents || []).slice().sort(function (a, b) { return a.opened_at < b.opened_at ? 1 : -1; });
+    if (!list.length) inc.appendChild(el("p", "empty", "No incidents in the last " + (d.days || 90) + " days."));
+    list.forEach(function (i) {
       var item = el("div", "incident");
-      var a = el("a", "", i.title); a.href = i.url; a.rel = "noopener";
-      item.appendChild(a);
+      if (i.url) { var a = el("a", "", i.title); a.href = i.url; a.rel = "noopener"; item.appendChild(a); }
+      else item.appendChild(el("strong", "", i.title));
       var when = new Date(i.opened_at).toLocaleString();
       item.appendChild(el("div", "meta", i.closed_at ? "Resolved · " + when + " – " + new Date(i.closed_at).toLocaleString() : "Ongoing since " + when));
       inc.appendChild(item);
     });
-    document.getElementById("updated").textContent = "Page data built " + ago(d.generated_at, now) + (newest ? "; last check " + ago(newest, now) + "." : ".");
+    $("updated").textContent = d.generated_at ? "Last check " + (newest ? ago(newest, now) : "unknown") + "." : "";
+    $("about").textContent = "Checks run from GitHub's servers about every " + Math.max(1, Math.round(interval / 60)) + " minute(s) against public pages only. A problem in one region or in a feature that needs a login may not show here.";
   }
-  var REFRESH_MS = 60000;
-  var last = null, refreshFailed = false;
+
+  // ---- loading: the data lives on the `status` branch, so refreshing needs no deployment
   function hovering() { return !!document.querySelector(".bar:hover"); }
+  function getJson(url) {
+    // One query value per refresh period: visitors share a cache entry, and a CDN cache cannot hide a new build.
+    var sep = url.indexOf("?") >= 0 ? "&" : "?";
+    return fetch(url + sep + "t=" + Math.floor(Date.now() / (cfg.refresh_seconds * 1000)), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  function fetchStatus() {
+    var urls = [cfg.data_url].concat(cfg.fallback_url ? [cfg.fallback_url] : []);
+    return urls.reduce(function (p, url) {
+      return p.catch(function () {
+        return getJson(url).then(function (d) { if (!d || !Array.isArray(d.components)) throw new Error("no data"); return d; });
+      });
+    }, Promise.reject(new Error("start")));
+  }
   function load() {
-    // One query value per minute: visitors share a cache entry, and the CDN's 10-minute cache cannot hide a new build.
-    return fetch("status.json?t=" + Math.floor(Date.now() / REFRESH_MS), { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    return fetchStatus()
       .then(function (d) { last = d; refreshFailed = false; if (!hovering()) render(d); })
       .catch(function () {
         if (last) { refreshFailed = true; if (!hovering()) render(last); return; }
-        var b = document.getElementById("banner"); b.textContent = "Could not load the status data"; b.className = "banner yellow";
+        $("banner").textContent = "Could not load the status data"; $("banner").className = "banner yellow";
       });
   }
-  load();
-  setInterval(function () { if (!document.hidden) load(); }, REFRESH_MS);
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
-  window.addEventListener("online", load);
+  function start() {
+    load();
+    setInterval(function () { if (!document.hidden) load(); }, cfg.refresh_seconds * 1000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+    window.addEventListener("online", load);
+  }
+  fetch("config.json", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (c) { for (var k in c) cfg[k] = c[k]; })
+    .catch(function () {})
+    .then(start);
 })();
 </script>
 </body>

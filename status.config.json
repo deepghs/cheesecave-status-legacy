@@ -1,0 +1,16 @@
+{
+  "name": "DeepGHS Hub",
+  "base_url": "https://hub.deepghs.org",
+  "components": [
+    { "name": "Website", "path": "/" },
+    { "name": "API", "path": "/api/version", "expect_json": { "api": "cheesecave" } },
+    { "name": "Repository listing", "path": "/api/datasets/deepghs/gelbooru_full/tree/main" },
+    {
+      "name": "File download",
+      "path": "/datasets/deepghs/gelbooru_full/resolve/main/meta.json",
+      "headers": { "Range": "bytes=0-1023" },
+      "expect_status": [200, 206],
+      "max_bytes": 2048
+    }
+  ]
+}
